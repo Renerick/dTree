@@ -1,49 +1,131 @@
-[{
-  "name": "Niclas Superlongsurname",
-  "class": "man",
-  "textClass": "emphasis",
-  "marriages": [{
-    "spouse": {
-      "name": "Iliana",
-      "class": "woman",
-      "extra": {
-        "nickname": "Illi"
-      }
-    },
-    "children": [{
-      "name": "James",
-      "class": "man",
-      "marriages": [{
+[
+  {
+    "name": "Niclas Superlongsurname",
+    "class": "man",
+    "textClass": "emphasis",
+    "marriages": [
+      {
         "spouse": {
-          "name": "Alexandra",
-          "class": "woman"
-        },
-        "children": [{
-          "name": "Eric",
-          "class": "man",
-          "marriages": [{
-            "spouse": {
-              "name": "Eva",
-              "class": "woman"
+          "name": "Iliana",
+          "class": "woman",
+          "extra": {
+            "nickname": "Illi"
+          },
+          "parents": [
+            {
+              "name": "test1",
+              "class": "man",
+              "parents": [
+                {
+                  "name": "test3",
+                  "class": "man"
+                },
+                {
+                  "name": "test4",
+                  "class": "woman"
+                }
+              ]
+            },
+            {
+              "name": "test2",
+              "class": "woman",
+              "parents": [
+                {
+                  "name": "test3",
+                  "class": "man"
+                },
+                {
+                  "name": "test4",
+                  "class": "woman"
+                }
+              ]
             }
-          }]
-        }, {
-          "name": "Jane",
-          "class": "woman"
-        }, {
-          "name": "Jasper",
-          "class": "man"
-        }, {
-          "name": "Emma",
-          "class": "woman"
-        }, {
-          "name": "Julia",
-          "class": "woman"
-        }, {
-          "name": "Jessica",
-          "class": "woman"
-        }]
-      }]
-    }]
-  }]
-}]
+          ]
+        },
+        "children": [
+          {
+            "name": "Alaina",
+            "class": "woman"
+          },
+          {
+            "name": "Bob",
+            "class": "man"
+          },
+          {
+            "name": "Sam",
+            "class": "man"
+          },
+          {
+            "name": "Jon",
+            "class": "man",
+            "marriages": [{
+              "spouse": {
+                "name": "Ilianasdfadsa",
+                "class": "woman",
+                "extra": {
+                  "nickname": "Illi"
+                }
+              },"children": [
+                {
+                  "name": "Alaina",
+                  "class": "woman"
+                },
+                {
+                  "name": "Bob",
+                  "class": "man"
+                },
+                {
+                  "name": "Sam",
+                  "class": "man"
+                },
+                {
+                  "name": "Jon",
+                  "class": "man",
+                  "marriages": [{
+                    "spouse": {
+                      "name": "Ilianasdfadsa",
+                      "class": "woman",
+                      "extra": {
+                        "nickname": "Illi"
+                      }
+                    }
+                  }]
+                }
+              ]
+            }]
+          }
+        ]
+      }
+    ],
+    "parents": [
+      {
+        "name": "test3",
+        "class": "man",
+        "parents": [
+          {
+            "name": "test3",
+            "class": "man"
+          },
+          {
+            "name": "test4",
+            "class": "woman"
+          }
+        ]
+      },
+      {
+        "name": "test4",
+        "class": "woman",
+        "parents": [
+          {
+            "name": "test3",
+            "class": "man"
+          },
+          {
+            "name": "test4",
+            "class": "woman"
+          }
+        ]
+      }
+    ]
+  }
+]

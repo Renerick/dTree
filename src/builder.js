@@ -1,14 +1,16 @@
 class TreeBuilder {
 
-  constructor(root, siblings, opts) {
+  constructor(treeData, opts) {
     TreeBuilder.DEBUG_LEVEL = opts.debug ? 1 : 0;
 
-    this.root = root;
-    this.siblings = siblings;
+    this.root = treeData.root;
+    this.siblings = treeData.siblings;
+    this.parents = treeData.parents;
     this.opts = opts;
 
     // flatten nodes
     this.allNodes = this._flatten(this.root);
+    this.allNodes = this.allNodes.concat(this._flatten(this.parents))
 
     // Calculate node size
     let visibleNodes = _.filter(this.allNodes, function(n) {
@@ -47,6 +49,10 @@ class TreeBuilder {
       .nodeSize([nodeSize[0] * 2,
                  opts.callbacks.nodeHeightSeperation(nodeSize[0], nodeSize[1])]);
 
+    this.inverseTree = d3.tree()
+      .nodeSize([nodeSize[0] * 2,
+                opts.callbacks.nodeHeightSeperation(nodeSize[0], nodeSize[1]) * -1]);
+
     this.tree.separation(function separation(a, b) {
       if (a.data.hidden || b.data.hidden) {
         return 0.3;
@@ -55,18 +61,40 @@ class TreeBuilder {
       }
     });
 
-    this._update(this.root);
+    this.inverseTree.separation(function separation(a, b) {
+      if (a.data.hidden || b.data.hidden) {
+        return 0.3;
+      } else {
+        return 0.6;
+      }
+    });
+
+    this._update();
 
   }
 
-  _update(source) {
+  _update() {
 
     let opts = this.opts;
     let allNodes = this.allNodes;
     let nodeSize = this.nodeSize;
 
-    let treenodes = this.tree(source);
-    let links = treenodes.links();
+    let rootNodes = this.tree(this.root);
+    let parentNodes = this.inverseTree(this.parents);
+
+    _.zip(rootNodes.children, parentNodes.children).forEach(function(i) {
+      if (!i[1].children) return;
+
+      i[0].children = i[0].children ? i[0].children.concat(i[1].children) : i[1].children;
+
+      if (i[1].children) {
+        i[1].children.forEach(function (j) {
+          j.parent = i[0];
+        })
+      }
+    })
+
+    let links = rootNodes.links();
 
     // Create the link lines.
     this.svg.selectAll('.link')
@@ -81,7 +109,7 @@ class TreeBuilder {
       .attr('d', this._elbow);
 
     let nodes = this.svg.selectAll('.node')
-      .data(treenodes.descendants())
+      .data(rootNodes.descendants())
       .enter();
 
     this._linkSiblings();

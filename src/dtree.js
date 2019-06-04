@@ -45,7 +45,7 @@ const dTree = {
     });
 
     var data = this._preprocess(data, opts);
-    var treeBuilder = new TreeBuilder(data.root, data.siblings, opts);
+    var treeBuilder = new TreeBuilder(data, opts);
     treeBuilder.create();
 
   },
@@ -59,7 +59,7 @@ const dTree = {
       name: '',
       id: id++,
       hidden: true,
-      children: []
+      children: [],
     };
 
     var reconstructTree = function(person, parent) {
@@ -70,7 +70,9 @@ const dTree = {
         id: id++,
         hidden: false,
         children: [],
+        parents: [],
         extra: person.extra,
+        isParent: !!person.isParent,
         textClass: person.textClass ? person.textClass : opts.styles.text,
         class: person.class ? person.class : opts.styles.node
       };
@@ -87,7 +89,8 @@ const dTree = {
           id: id++,
           hidden: true,
           children: [],
-          noParent: node.noParent
+          noParent: node.noParent,
+          isParent: node.isParent
         };
         parent.children.push(pushNode);
         parent = pushNode;
@@ -101,7 +104,49 @@ const dTree = {
         reconstructTree(child, node);
       });
 
-      parent.children.push(node);
+      if (person.parents){
+
+        // reconstruct parents
+        var p1 = person.parents[0];
+        p1.isParent = true;
+        var p2 = person.parents[1];
+        p2.isParent = true;
+
+        var m = {
+          name: '',
+          id: id++,
+          hidden: true,
+          noParent: false,
+          isParent: true,
+          children: [],
+          parents: [],
+          extra: null
+        };
+
+        var p1result = reconstructTree(p1, node);
+        p1result.noParent = true;
+
+        node.parents.push(m);
+
+        var p2result = reconstructTree(p2, node);
+        p2result.marriageNode = m;
+        p2result.noParent = true;
+
+        siblings.push({
+          source: {
+            id: p1result.id
+          },
+          target: {
+            id: p2result.id
+          },
+          number: 0
+        });
+      }
+
+      if (!node.isParent)
+        parent.children.push(node);
+      else
+        parent.parents.push(node)
 
       //sort marriages
       dTree._sortMarriages(person.marriages, opts);
@@ -118,21 +163,12 @@ const dTree = {
           extra: marriage.extra
         };
 
+        parent.children.push(m);
+
         var sp = marriage.spouse;
-
-        var spouse = {
-          name: sp.name,
-          id: id++,
-          hidden: false,
-          noParent: true,
-          children: [],
-          textClass: sp.textClass ? sp.textClass : opts.styles.text,
-          class: sp.class ? sp.class : opts.styles.node,
-          extra: sp.extra,
-          marriageNode: m
-        };
-
-        parent.children.push(m, spouse);
+        var spouse = reconstructTree(sp, parent);
+        spouse.marriageNode = m;
+        spouse.noParent = true;
 
         dTree._sortPersons(marriage.children, opts);
         _.forEach(marriage.children, function(child) {
@@ -150,6 +186,11 @@ const dTree = {
         });
       });
 
+      if (parent == root) {
+        parent.parents = _.clone(parent.children);
+      }
+
+      return node;
     };
 
     _.forEach(data, function(person) {
@@ -157,7 +198,8 @@ const dTree = {
     });
 
     return {
-      root: d3.hierarchy(root),
+      root: d3.hierarchy(root, function(d) { return d.children }),
+      parents: d3.hierarchy(root, function(d) { return d.parents }),
       siblings: siblings
     };
 
