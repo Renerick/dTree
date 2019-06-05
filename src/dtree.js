@@ -108,9 +108,12 @@ const dTree = {
 
         // reconstruct parents
         var p1 = person.parents[0];
-        p1.isParent = true;
+        if (p1)
+          p1.isParent = true;
+
         var p2 = person.parents[1];
-        p2.isParent = true;
+        if (p2)
+          p2.isParent = true;
 
         var m = {
           name: '',
@@ -123,24 +126,33 @@ const dTree = {
           extra: null
         };
 
-        var p1result = reconstructTree(p1, node);
-        p1result.noParent = true;
+        if (p1) {
+          var p1result = reconstructTree(p1, node);
+        }
 
-        node.parents.push(m);
+        if (p1 && p2) {
+          node.parents.push(m);
+        }
 
-        var p2result = reconstructTree(p2, node);
-        p2result.marriageNode = m;
-        p2result.noParent = true;
+        if (p2){
+          var p2result = reconstructTree(p2, node);
+          p2result.marriageNode = m;
+        }
 
-        siblings.push({
-          source: {
-            id: p1result.id
-          },
-          target: {
-            id: p2result.id
-          },
-          number: 0
-        });
+        if (p1 && p2) {
+
+          p1result.noParent = true;
+          p2result.noParent = true;
+          siblings.push({
+            source: {
+              id: p1result.id
+            },
+            target: {
+              id: p2result.id
+            },
+            number: 0
+          });
+        }
       }
 
       if (!node.isParent)
