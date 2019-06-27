@@ -8,17 +8,19 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
   'use strict';
 
   var TreeBuilder = (function () {
-    function TreeBuilder(root, siblings, opts) {
+    function TreeBuilder(treeData, opts) {
       _classCallCheck(this, TreeBuilder);
 
       TreeBuilder.DEBUG_LEVEL = opts.debug ? 1 : 0;
 
-      this.root = root;
-      this.siblings = siblings;
+      this.root = treeData.root;
+      this.siblings = treeData.siblings;
+      this.parents = treeData.parents;
       this.opts = opts;
 
       // flatten nodes
       this.allNodes = this._flatten(this.root);
+      this.allNodes = this.allNodes.concat(this._flatten(this.parents));
 
       // Calculate node size
       var visibleNodes = _.filter(this.allNodes, function (n) {
@@ -48,6 +50,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         // Compute the layout.
         this.tree = d3.tree().nodeSize([nodeSize[0] * 2, opts.callbacks.nodeHeightSeperation(nodeSize[0], nodeSize[1])]);
 
+        this.inverseTree = d3.tree().nodeSize([nodeSize[0] * 2, opts.callbacks.nodeHeightSeperation(nodeSize[0], nodeSize[1]) * -1]);
+
         this.tree.separation(function separation(a, b) {
           if (a.data.hidden || b.data.hidden) {
             return 0.3;
@@ -56,18 +60,40 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
           }
         });
 
-        this._update(this.root);
+        this.inverseTree.separation(function separation(a, b) {
+          if (a.data.hidden || b.data.hidden) {
+            return 0.3;
+          } else {
+            return 0.6;
+          }
+        });
+
+        this._update();
       }
     }, {
       key: '_update',
-      value: function _update(source) {
+      value: function _update() {
 
         var opts = this.opts;
         var allNodes = this.allNodes;
         var nodeSize = this.nodeSize;
 
-        var treenodes = this.tree(source);
-        var links = treenodes.links();
+        var rootNodes = this.tree(this.root);
+        var parentNodes = this.inverseTree(this.parents);
+
+        _.zip(rootNodes.children, parentNodes.children).forEach(function (i) {
+          if (!i[1].children) return;
+
+          i[0].children = i[0].children ? i[0].children.concat(i[1].children) : i[1].children;
+
+          if (i[1].children) {
+            i[1].children.forEach(function (j) {
+              j.parent = i[0];
+            });
+          }
+        });
+
+        var links = rootNodes.links();
 
         // Create the link lines.
         this.svg.selectAll('.link').data(links).enter()
@@ -76,7 +102,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
           return !l.target.data.noParent;
         }).append('path').attr('class', opts.styles.linage).attr('d', this._elbow);
 
-        var nodes = this.svg.selectAll('.node').data(treenodes.descendants()).enter();
+        var nodes = this.svg.selectAll('.node').data(rootNodes.descendants()).enter();
 
         this._linkSiblings();
 
@@ -341,7 +367,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
       });
 
       var data = this._preprocess(data, opts);
-      var treeBuilder = new TreeBuilder(data.root, data.siblings, opts);
+      var treeBuilder = new TreeBuilder(data, opts);
       treeBuilder.create();
     },
 
@@ -365,7 +391,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
           id: id++,
           hidden: false,
           children: [],
+          parents: [],
           extra: person.extra,
+          isParent: !!person.isParent,
           textClass: person.textClass ? person.textClass : opts.styles.text,
           'class': person['class'] ? person['class'] : opts.styles.node
         };
@@ -382,7 +410,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             id: id++,
             hidden: true,
             children: [],
-            noParent: node.noParent
+            noParent: node.noParent,
+            isParent: node.isParent
           };
           parent.children.push(pushNode);
           parent = pushNode;
@@ -396,7 +425,56 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
           reconstructTree(child, node);
         });
 
-        parent.children.push(node);
+        if (person.parents) {
+
+          // reconstruct parents
+          var p1 = person.parents[0];
+          if (p1) p1.isParent = true;
+
+          var p2 = person.parents[1];
+          if (p2) p2.isParent = true;
+
+          var m = {
+            name: '',
+            id: id++,
+            hidden: true,
+            noParent: false,
+            isParent: true,
+            children: [],
+            parents: [],
+            extra: null
+          };
+
+          if (p1) {
+            var p1result = reconstructTree(p1, node);
+          }
+
+          if (p1 && p2) {
+            node.parents.push(m);
+          }
+
+          if (p2) {
+            var p2result = reconstructTree(p2, node);
+            p2result.marriageNode = m;
+          }
+
+          if (p1 && p2) {
+
+            p1result.noParent = true;
+            p2result.noParent = true;
+            siblings.push({
+              source: {
+                id: p1result.id
+              },
+              target: {
+                id: p2result.id
+              },
+              number: 0
+            });
+          }
+        }
+
+        if (!node.isParent) parent.children.push(node);else parent.parents.push(node);
 
         //sort marriages
         dTree._sortMarriages(person.marriages, opts);
@@ -413,21 +491,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             extra: marriage.extra
           };
 
+          parent.children.push(m);
+
           var sp = marriage.spouse;
-
-          var spouse = {
-            name: sp.name,
-            id: id++,
-            hidden: false,
-            noParent: true,
-            children: [],
-            textClass: sp.textClass ? sp.textClass : opts.styles.text,
-            'class': sp['class'] ? sp['class'] : opts.styles.node,
-            extra: sp.extra,
-            marriageNode: m
-          };
-
-          parent.children.push(m, spouse);
+          var spouse = reconstructTree(sp, parent);
+          spouse.marriageNode = m;
+          spouse.noParent = true;
 
           dTree._sortPersons(marriage.children, opts);
           _.forEach(marriage.children, function (child) {
@@ -444,6 +513,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             number: index
           });
         });
+
+        if (parent == root) {
+          parent.parents = _.clone(parent.children);
+        }
+
+        return node;
       };
 
       _.forEach(data, function (person) {
@@ -451,7 +526,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
       });
 
       return {
-        root: d3.hierarchy(root),
+        root: d3.hierarchy(root, function (d) {
+          return d.children;
+        }),
+        parents: d3.hierarchy(root, function (d) {
+          return d.parents;
+        }),
         siblings: siblings
       };
     },

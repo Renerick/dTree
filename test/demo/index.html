@@ -3,35 +3,52 @@
 
 <style type="text/css">
 	body {
-	    font: 10px sans-serif;
+		font: 10px sans-serif;
 	}
+
 	.linage {
-	    fill: none;
-	    stroke: #000;
+		fill: none;
+		stroke: #000;
 	}
+
 	.marriage {
-	    fill: none;
-	    stroke: black;
+		fill: none;
+		stroke: black;
 	}
-	.man {
-	    background-color: lightblue;
-			border-style: solid;
-			border-width: 1px;
-			box-sizing: border-box;
+
+	.node {
+		background: #FFFFFF;
+		border: 1px solid #DDDDDD;
+		box-sizing: border-box;
+		box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.15);
+		border-radius: 35px;
+		margin: 5px;
+
 	}
-	.woman {
-			background-color: pink;
-			border-style: solid;
-			border-width: 1px;
-			box-sizing: border-box;
+
+	.node img {
+		float: left;
+		height: 100%;
 	}
-	.emphasis{
-			font-style: italic;
+
+	.node h2 {
+		margin: 0;
+		font-size: 24px;
 	}
+
+	.node p {
+		/* font-family: Adamina; */
+font-style: normal;
+font-weight: normal;
+font-size: 14px;
+line-height: 19px;
+	}
+
 	p {
-		padding:0;
-		margin:0;
+		padding: 0;
+		margin: 0;
 	}
+
 	svg {
 		border-style: solid;
 		border-width: 1px;
@@ -41,33 +58,82 @@
 <script src="https://cdn.jsdelivr.net/lodash/4.17.4/lodash.min.js"></script>
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script src="dtree.js"></script>
-<body>
-		<h1>Demo</h1>
-    <div id="graph"></div>
 
-		<script>
-      treeJson = d3.json("data.json", function(error, treeData) {
-      	dTree.init(treeData,
-					{
-						target: "#graph",
-						debug: true,
-						height: 800,
-						width: 1200,
-						callbacks: {
-							nodeClick: function(name, extra) {
-								alert('Click: ' + name);
-							},
-							nodeRightClick: function(name, extra) {
-								alert('Right-click: ' + name);
-							},
-							textRenderer: function(name, extra, textClass) {
-								if (extra && extra.nickname)
-									name = name + " (" + extra.nickname + ")";
-								return "<p align='center' class='" + textClass + "'>" + name + "</p>";
-							}
+<body>
+	<h1>Demo</h1>
+	<div id="graph"></div>
+
+	<script>
+		treeJson = d3.json("data.json", function (error, treeData) {
+			dTree.init(treeData,
+				{
+					target: "#graph",
+					debug: true,
+					height: 800,
+					width: 1200,
+					nodeWidth: 250,
+					callbacks: {
+						nodeClick: function (name, extra) {
+							alert('Click: ' + name);
+						},
+						nodeRightClick: function (name, extra) {
+							alert('Right-click: ' + name);
+						},
+						nodeSize: function (nodes, width, textRenderer) {
+							width = width;
+							var maxWidth = 0;
+							var maxHeight = 0;
+							var tmpSvg = document.createElement('svg');
+							document.body.appendChild(tmpSvg);
+
+							_.map(nodes, function (n) {
+								var container = document.createElement('div');
+								container.setAttribute('class', 'node ' + n.data['class']);
+								container.style.visibility = 'hidden';
+								container.style.maxWidth = width + 'px';
+
+								var text = textRenderer(n.data.name, n.data.extra, n.data.textClass);
+								container.innerHTML = text;
+
+								tmpSvg.appendChild(container);
+								var height = container.offsetHeight + 10;
+								tmpSvg.removeChild(container);
+
+								maxHeight = Math.max(maxHeight, height);
+								console.log(container, height, maxHeight);
+								n.cHeight = maxHeight;
+								if (n.data.hidden) {
+									n.cWidth = 0;
+								} else {
+									n.cWidth = width;
+								}
+							});
+							document.body.removeChild(tmpSvg);
+
+							return [width + 10, maxHeight];
+						},
+						textRenderer: function (name, extra, textClass) {
+							var result = "<div style='margin: 5px'><h2 class='" + textClass + "'>" + name + "</h2>";
+							if (extra && extra.Birthday)
+								result += "<p>" + extra.Birthday + "-" + extra.Death + "</p>";
+							result += "</div>"
+							return result;
+						},
+						nodeRenderer: function (name, x, y, height, width, extra, id, nodeClass, textClass, textRenderer) {
+							var node = '';
+							node += '<div ';
+							// node += 'style="height:100%;width:100%;" ';
+							node += 'class="node" ';
+							node += 'id="node' + id + '">\n';
+							node += "<img src='/media/raw/" + (extra ? extra.Photo : "") + "'>"
+							node += textRenderer(name, extra, textClass);
+							node += '</div>';
+							return node;
 						}
-					});
-    	});
-    </script>
+					}
+				});
+		});
+	</script>
 </body>
+
 </html>

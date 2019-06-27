@@ -1,0 +1,12 @@
+[
+  {
+    "name": "Niclas Super",
+    "class": "man",
+    "textClass": "emphasis",
+    "extra": {
+      "Photo": "123",
+      "Birthday": "1984",
+      "Death": "20184"
+    }
+  }
+]
